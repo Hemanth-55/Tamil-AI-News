@@ -1,0 +1,49 @@
+name: AI News
+
+on:
+  schedule:
+    - cron: "15 12 * * *"        # daily briefing, 7:15 AM Boston (12:15 UTC; 8:15 AM during daylight time)
+    - cron: "45 15,19,23 * * *"  # breaking-news checks through the day
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily or breaking"
+        default: "daily"
+  push:
+    branches: [main]
+    paths: ["src/**", ".github/workflows/news.yml"]
+
+permissions:
+  contents: write
+
+concurrency: news
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q -r requirements.txt
+      - name: Build and send
+        env:
+          GREEN_API_URL: ${{ secrets.GREEN_API_URL }}
+          GREEN_ID: ${{ secrets.GREEN_ID }}
+          GREEN_TOKEN: ${{ secrets.GREEN_TOKEN }}
+          WHATSAPP_CHAT_ID: ${{ secrets.WHATSAPP_CHAT_ID }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_KEY: ${{ secrets.CALLMEBOT_KEY }}
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -z "$MODE" ]; then
+            if [ "${{ github.event.schedule }}" = "15 12 * * *" ] || [ "${{ github.event_name }}" = "push" ]; then MODE=daily; else MODE=breaking; fi
+          fi
+          python src/digest.py "$MODE"
+      - name: Save the briefing and state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add digests state
+          git diff --cached --quiet || (git commit -m "AI news $(date -u +%F)" && git push)

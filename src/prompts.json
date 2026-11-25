@@ -1,0 +1,17 @@
+[
+ {"use": "Learn any topic fast", "prompt": "Explain [topic] to me in three levels: like I'm 12, like I'm a university student, and like I'm an expert. Then give me one question to check I understood."},
+ {"use": "Get a second opinion on your work", "prompt": "Here is my draft. Act as a tough but fair reviewer. List the three weakest points, why each matters, and a concrete fix for each. Don't rewrite it for me."},
+ {"use": "Turn notes into a plan", "prompt": "Here are my messy notes. Turn them into a step-by-step plan with owners, deadlines and the first action I can take in the next 30 minutes."},
+ {"use": "Make data talk", "prompt": "I'll paste a table. Tell me the three most important patterns, one thing that looks wrong or suspicious, and the single chart that would explain it best to a manager."},
+ {"use": "Practice an interview", "prompt": "Interview me for a [role] position. Ask one question at a time, wait for my answer, then score it out of 10 with one specific improvement before the next question."},
+ {"use": "Debug with reasoning", "prompt": "Here is my code and the error. Before suggesting a fix, list the three most likely causes ranked by probability and how to test each one quickly."},
+ {"use": "Write clearly", "prompt": "Rewrite this so a busy reader gets the point in 10 seconds: lead with the conclusion, cut every unnecessary word, keep my voice, and keep all facts and numbers exactly as they are."},
+ {"use": "Stress-test a decision", "prompt": "I'm deciding [decision]. Argue the strongest case for each option, then tell me what information would change your recommendation."},
+ {"use": "Summarise a long read", "prompt": "Summarise this article in five bullet points, then list any claims that need a source and the questions I should ask before believing it."},
+ {"use": "Learn by building", "prompt": "Give me a 30-minute hands-on project to learn [skill]. Include the goal, the steps, the expected result and one stretch challenge."},
+ {"use": "Compare tools honestly", "prompt": "Compare [tool A] and [tool B] for [my use case]. Use a table: cost, learning curve, strengths, weaknesses, and which one you'd pick for a beginner and why."},
+ {"use": "Prepare for a meeting", "prompt": "I'm meeting [person/role] about [topic]. Give me their likely goals, three smart questions to ask, and one thing I should avoid saying."},
+ {"use": "Find the gaps", "prompt": "Here is my project idea. What are the three assumptions most likely to be wrong, and what is the cheapest experiment to test each one this week?"},
+ {"use": "Build a study sheet", "prompt": "Create a one-page cheat sheet for [topic]: key ideas, formulas or rules, one worked example, and the three most common mistakes."},
+ {"use": "Sharpen a pitch", "prompt": "Here is my 60-second pitch. Make it sharper: one hook sentence, the problem, the proof with a number, and a clear ask. Keep it under 120 words."}
+]
