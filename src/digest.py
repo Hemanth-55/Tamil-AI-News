@@ -16,8 +16,8 @@ import feedparser
 import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
-from sources import AGGREGATE, AI_WORDS, HF_TRENDING, HN, LEARN, OFFICIAL, OUTLETS, TRUSTED
-import send
+from sources import AGGREGATE, AI_WORDS, COMPANIES, HF_TRENDING, HN, LEARN, OFFICIAL, OUTLETS, SPORTS_AI, TRUSTED, YOUTUBE
+import astro, frontpage, send
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / "state" / "seen.json"
@@ -110,6 +110,14 @@ def collect(hours):
     return items
 
 
+# ------------------------------------------------------------------ companies
+def company_of(text):
+    t = f" {text.lower()} "
+    hits = [(min((t.find(k) for k in kws if k in t), default=10**6), name) for name, kws in COMPANIES.items()]
+    hits = [h for h in hits if h[0] < 10**6]
+    return min(hits)[1] if hits else None
+
+
 # ------------------------------------------------------------------ grouping and verifying
 def tokens(title):
     words = re.findall(r"[a-z0-9][a-z0-9.\-]+", title.lower())
@@ -143,7 +151,12 @@ def cluster(items):
         verified = bool(official) or len(pubs) >= 2
         score = 4 * bool(official) + 2.2 * len(pubs) + 1.2 * math.log1p(points) - .04 * age_h
         summary = next((i["summary"] for i in its if i["summary"] and i["kind"] in ("official", "outlet")), "")
-        out.append(dict(title=lead["title"], link=lead["link"], summary=summary, pubs=sorted({i["pub"] for i in its if i["kind"] != "hn"}),
+        company = company_of(lead["title"]) or company_of(" ".join(i["title"] for i in its))
+        if company:
+            score += 3
+        strong = bool(re.search(r"launch|releas|introduc|unveil|announc|acquir|partnership|ipo|raises|funding|lawsuit|"
+                                r"ban|regulat|resign|steps down|fired|outage|breach|open.?source|gpt-|claude|gemini|llama", lead["title"].lower()))
+        out.append(dict(title=lead["title"], link=lead["link"], summary=summary, company=company, strong=strong, pubs=sorted({i["pub"] for i in its if i["kind"] != "hn"}),
                         official=bool(official), points=points, verified=verified, score=round(score, 2),
                         key=" ".join(sorted(g["tokens"])[:12])))
     return sorted(out, key=lambda s: -s["score"])
@@ -217,64 +230,142 @@ def diverse(stories, n):
 
 def is_seen(story, seen):
     tk = set(story["key"].split())
-    return any(len(tk & set(k.split())) >= max(3, .6 * min(len(tk), len(k.split()))) for k in seen if not k.startswith(("hf:", "learn:")))
+    return any(len(tk & set(k.split())) >= max(3, .6 * min(len(tk), len(k.split()))) for k in seen if not k.startswith(("hf:", "learn:", "yt:", "sp:")))
 
 
-# ------------------------------------------------------------------ formatting
-def daily_message(stories, tool_list, learn_list, prompt):
-    d = NOW.astimezone(timezone(timedelta(hours=-5)))
-    lines = [f"*Tamil · AI News*  ·  {d.strftime('%a %d %b')}", "_3-minute read · verified stories only_", ""]
-    lines.append("*Top stories*")
+# ------------------------------------------------------------------ social: official YouTube channels, career
+def youtube(seen):
+    """New videos from official company channels (free RSS). Channel ids are resolved once and cached."""
+    cache_f = ROOT / "state" / "youtube_ids.json"
+    try:
+        cache = json.loads(cache_f.read_text())
+    except Exception:
+        cache = {}
+    out = []
+    for name, handle in YOUTUBE.items():
+        cid = cache.get(handle)
+        if not cid:
+            try:
+                page = requests.get(f"https://www.youtube.com/{handle}", headers=UA, timeout=20).text
+                m = re.search(r'"externalId":"(UC[\w-]{22})"', page) or re.search(r'channel_id=(UC[\w-]{22})', page)
+                cid = m.group(1) if m else None
+                if cid:
+                    cache[handle] = cid
+            except Exception:
+                cid = None
+        if not cid:
+            continue
+        for e in feed(f"https://www.youtube.com/feeds/videos.xml?channel_id={cid}")[:3]:
+            d = when(e)
+            if d and d > NOW - timedelta(hours=48) and f"yt:{e.get('link')}" not in seen:
+                out.append(dict(key=f"yt:{e.get('link')}", at=d, line=f"*{name}* · {clean(e.get('title'), 90)}", link=e.get("link")))
+    cache_f.parent.mkdir(exist_ok=True)
+    cache_f.write_text(json.dumps(cache, indent=1))
+    return sorted(out, key=lambda x: x["at"], reverse=True)[:2]
+
+
+def career(seen):
+    """AI in sport, from trusted newsrooms: closest to Hemanth's career."""
+    out = []
+    for e in feed(SPORTS_AI):
+        pub = clean((e.get("source") or {}).get("title", ""))
+        title = clean(e.get("title"))
+        if pub and title.endswith(" - " + pub):
+            title = title[: -len(pub) - 3]
+        if pub.lower() in TRUSTED and f"sp:{e.get('link')}" not in seen and is_ai(title):
+            out.append(dict(key=f"sp:{e.get('link')}", line=f"*{clean(title, 100)}* · {pub}", link=e.get("link")))
+    return out[:1]
+
+
+def company_counts(items):
+    counts = {}
+    for it in items:
+        if it["kind"] in ("official", "outlet", "aggregate"):
+            c = company_of(it["title"])
+            if c:
+                counts[c] = counts.get(c, 0) + 1
+    return counts
+
+
+# ------------------------------------------------------------------ formatting (WhatsApp)
+LINE = "━━━━━━━━━━━━━━━━━━━━"
+
+
+def boston_now():
+    return NOW.astimezone(timezone(timedelta(hours=-5)))
+
+
+def src_line(s):
+    return "Official announcement" if s["official"] and len(s["pubs"]) < 2 else f"Confirmed by {len(s['pubs'])} sources"
+
+
+def daily_message(stories, energy, extras):
+    d = boston_now()
+    L = ["*THE TAMIL JOURNAL*", f"_{d.strftime('%A, %B %-d, %Y')} · AI Edition_", LINE, "",
+         "*Vanakkam, Hemanth.*",
+         f"_Moon in {energy['moon_star']} · {energy['tara']}, {energy['tara_meaning']}_", energy["message"],
+         f"_{energy['weekday']}_", "", LINE, "*WHAT'S NEWS*", ""]
     for i, s in enumerate(stories, 1):
-        src = "official announcement" if s["official"] and len(s["pubs"]) < 2 else f"{len(s['pubs'])} sources"
-        lines.append(f"{i}. *{clean(s['title'], 110)}*")
+        L += [f"*{i} · {(s['company'] or 'AI').upper()}*", f"*{clean(s['title'], 120)}*"]
         if s["summary"]:
-            lines.append(f"   {s['summary']}")
-        lines.append(f"   ✓ {src} · {s['link']}")
+            L.append(s["summary"])
+        L += [f"✓ {src_line(s)}", s["link"], ""]
     if not stories:
-        lines.append("A quiet day: no story met the verification bar.")
-    if tool_list:
-        lines += ["", "*Tools to try*"] + [f"• {t['line']}\n  {t['link']}" for t in tool_list]
-    if learn_list:
-        lines += ["", "*Learn*"] + [f"• {t['line']}\n  {t['link']}" for t in learn_list]
-    lines += ["", "*Prompt to try*", f"_{prompt['use']}_", f"```{prompt['prompt']}```", "", "— Tamil"]
-    return "\n".join(lines)
+        L += ["A quiet day: no story met the verification bar.", ""]
+    for title, rows in extras:
+        if rows:
+            L += [LINE, f"*{title}*", ""] + [f"▸ {r['line']}\n{r['link']}" for r in rows] + [""]
+    p = prompt_of_the_day()
+    L += [LINE, "*PROMPT OF THE DAY*", f"_{p['use']}_", p["prompt"], "", LINE,
+          "_Verified: every story is confirmed by the company itself or by two or more independent newsrooms._"]
+    return "\n".join(L)
 
 
 def breaking_message(s):
-    return (f"*Tamil · AI News · Breaking*\n\n*{clean(s['title'], 140)}*\n"
-            + (f"{s['summary']}\n" if s["summary"] else "") + f"✓ {len(s['pubs'])} sources · {s['link']}")
+    t = boston_now().strftime("%-I:%M %p")
+    return "\n".join(["*BREAKING · THE TAMIL JOURNAL*", LINE, f"*{(s['company'] or 'AI').upper()}*",
+                      f"*{clean(s['title'], 140)}*"] + ([s["summary"]] if s["summary"] else []) +
+                     [f"✓ {src_line(s)} · {t} Boston", s["link"]])
 
 
 # ------------------------------------------------------------------ main
 def main(mode):
     state = load_state()
-    today = NOW.date().isoformat()
+    today = boston_now().date().isoformat()
+    out_dir = ROOT / "digests"; out_dir.mkdir(exist_ok=True)
+    image = None
     if mode == "daily":
-        if (ROOT / "digests" / f"{today}-daily.md").exists() and not os.environ.get("FORCE"):
+        if (out_dir / f"{today}-daily.md").exists() and not os.environ.get("FORCE"):
             print("today's briefing was already sent"); return
-        stories = diverse([s for s in cluster(collect(28)) if s["verified"] and not is_seen(s, state["seen"])], 5)
-        tl, ll = tools(state["seen"]), learn(state["seen"])
-        msg = daily_message(stories, tl, ll, prompt_of_the_day())
-        keys = [s["key"] for s in stories] + [t["key"] for t in tl + ll]
+        items = collect(28)
+        fresh = os.environ.get("IGNORE_SEEN")
+        ranked = [s for s in cluster(items) if s["verified"] and (fresh or not is_seen(s, state["seen"]))]
+        stories = diverse(ranked, 5)
+        energy = astro.today(NOW, boston_now().weekday())
+        sn = {} if fresh else state["seen"]
+        extras = [("FROM THE SOURCE", youtube(sn)), ("CAREER EDGE", career(sn) + learn(sn)), ("TOOLS TO TRY", tools(sn))]
+        msg = daily_message(stories, energy, extras)
+        image = str(out_dir / f"{today}-front-page.png")
+        frontpage.render(image, f"{boston_now().strftime('%A, %B %-d, %Y')} · Boston · AI Edition", "Vanakkam, Hemanth.",
+                         energy, stories, company_counts(items))
+        keys = [s["key"] for s in stories] + [r["key"] for _, rows in extras for r in rows]
     else:
         sent_today = state["breaking"].get(today, 0)
-        big = [s for s in cluster(collect(4)) if s["verified"] and not is_seen(s, state["seen"])
-               and (len(s["pubs"]) >= 4 or (s["official"] and len(s["pubs"]) >= 2))]
-        if not big or sent_today >= 2:
+        big = [s for s in cluster(collect(3)) if s["verified"] and s["company"] and not is_seen(s, state["seen"])
+               and ((s["official"] and s["strong"]) or len(s["pubs"]) >= 3)]
+        if not big or sent_today >= 4:
             print("no breaking story"); return
         msg, keys = breaking_message(big[0]), [big[0]["key"]]
         state["breaking"] = {today: sent_today + 1}
-    (ROOT / "digests").mkdir(exist_ok=True)
-    (ROOT / "digests" / f"{today}-{mode}.md").write_text(msg + "\n")
+    stamp = today if mode == "daily" else boston_now().strftime("%Y-%m-%d-%H%M")
+    (out_dir / f"{stamp}-{mode}.md").write_text(msg + "\n")
     print(msg)
-    ok, how = send.whatsapp(msg)
+    ok, how = send.whatsapp(msg, image=image, caption="*THE TAMIL JOURNAL* · today's front page")
     STATE.parent.mkdir(exist_ok=True)
     (STATE.parent / "last_send.json").write_text(json.dumps({"at": NOW.isoformat(), "mode": mode, "delivered_by": how, "ok": ok}, indent=1))
     if ok:
         for k in keys:
             state["seen"][k] = today
-        STATE.parent.mkdir(exist_ok=True)
         STATE.write_text(json.dumps(state, indent=1))
 
 

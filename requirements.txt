@@ -1,2 +1,4 @@
 feedparser==6.0.11
 requests>=2.31
+ephem==4.2.1
+matplotlib>=3.9

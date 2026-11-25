@@ -14,6 +14,7 @@ OFFICIAL = {
     "NVIDIA": "https://blogs.nvidia.com/feed/",
     "Hugging Face": "https://huggingface.co/blog/feed.xml",
     "AWS Machine Learning": "https://aws.amazon.com/blogs/machine-learning/feed/",
+    "Apple Machine Learning": "https://machinelearning.apple.com/rss.xml",
 }
 OUTLETS = {
     "TechCrunch": "https://techcrunch.com/category/artificial-intelligence/feed/",
@@ -26,6 +27,10 @@ OUTLETS = {
 }
 # Google News search feeds pull Reuters, Bloomberg, CNBC, AP and others; each item names its publisher
 AGGREGATE = {
+    "Google News · OpenAI": "https://news.google.com/rss/search?q=OpenAI+when:1d&hl=en-US&gl=US&ceid=US:en",
+    "Google News · Anthropic": "https://news.google.com/rss/search?q=Anthropic+Claude+when:1d&hl=en-US&gl=US&ceid=US:en",
+    "Google News · Google AI": "https://news.google.com/rss/search?q=Google+Gemini+OR+DeepMind+when:1d&hl=en-US&gl=US&ceid=US:en",
+    "Google News · Meta AI": "https://news.google.com/rss/search?q=%22Meta%22+AI+Llama+OR+Zuckerberg+when:1d&hl=en-US&gl=US&ceid=US:en",
     "Google News · AI": "https://news.google.com/rss/search?q=%22artificial+intelligence%22+OR+%22AI+model%22+when:1d&hl=en-US&gl=US&ceid=US:en",
     "Google News · labs": "https://news.google.com/rss/search?q=OpenAI+OR+Anthropic+OR+Gemini+OR+%22Meta+AI%22+OR+Nvidia+OR+xAI+OR+Mistral+when:1d&hl=en-US&gl=US&ceid=US:en",
 }
@@ -47,3 +52,26 @@ TRUSTED = {"reuters", "bloomberg", "associated press", "ap news", "cnbc", "the v
 AI_WORDS = ("ai", "a.i.", "artificial intelligence", "llm", "gpt", "chatgpt", "openai", "anthropic", "claude", "gemini",
             "deepmind", "llama", "mistral", "nvidia", "copilot", "machine learning", "neural", "model", "agent",
             "agi", "xai", "grok", "deepseek", "qwen", "hugging face", "diffusion", "robot", "chip", "gpu", "inference")
+
+# the companies that run AI: stories about them are ranked first and can trigger breaking alerts
+COMPANIES = {
+    "OpenAI": ("openai", "chatgpt", "gpt-", "sam altman", "sora", "codex"),
+    "Anthropic": ("anthropic", "claude", "dario amodei"),
+    "Google": ("google", "gemini", "deepmind", "alphabet", "sundar pichai", "demis hassabis"),
+    "Meta": ("meta ", "meta's", "llama", "zuckerberg"),
+    "Microsoft": ("microsoft", "copilot", "satya nadella", "azure"),
+    "NVIDIA": ("nvidia", "jensen huang", "blackwell", "cuda"),
+    "Apple": ("apple intelligence", "apple ", "apple's", "siri"),
+    "Amazon": ("amazon", "aws", "alexa", "bedrock"),
+    "xAI": ("xai", "grok"),
+    "DeepSeek": ("deepseek",),
+    "Mistral": ("mistral",),
+}
+
+# official YouTube channels (free RSS; channel ids are looked up from the handle at run time)
+YOUTUBE = {"OpenAI": "@OpenAI", "Anthropic": "@anthropic-ai", "Google DeepMind": "@googledeepmind",
+           "Google for Developers": "@GoogleDevelopers", "NVIDIA": "@NVIDIA", "Microsoft": "@Microsoft",
+           "Meta AI": "@AIatMeta", "Hugging Face": "@HuggingFace"}
+
+# AI in sport: kept for the career section
+SPORTS_AI = "https://news.google.com/rss/search?q=%22sports+analytics%22+OR+%22AI%22+%28NBA+OR+NFL+OR+MLB+OR+NHL+OR+cricket%29+when:3d&hl=en-US&gl=US&ceid=US:en"

@@ -27,10 +27,31 @@ def chunks(text):
     return out + [cur] if cur else out
 
 
-def whatsapp(text):
+def green_image(env, path, caption):
+    """Send the front page as a picture. Uses the instance's media host (GREEN_MEDIA_URL, or derived from GREEN_API_URL)."""
+    base = (env("GREEN_API_URL") or "https://api.green-api.com").rstrip("/")
+    media = (env("GREEN_MEDIA_URL") or base.replace(".api.", ".media.").replace("//api.", "//media.")).rstrip("/")
+    for host in dict.fromkeys([media, base]):
+        try:
+            with open(path, "rb") as f:
+                r = requests.post(f"{host}/waInstance{env('GREEN_ID')}/sendFileByUpload/{env('GREEN_TOKEN')}",
+                                  data={"chatId": env("WHATSAPP_CHAT_ID"), "caption": caption},
+                                  files={"file": (os.path.basename(path), f, "image/png")}, timeout=60)
+            print("green-api image", r.status_code)
+            if r.status_code < 300:
+                return True
+        except Exception as ex:
+            print("green-api image failed", type(ex).__name__)
+    return False
+
+
+def whatsapp(text, image=None, caption=""):
     env = os.environ.get
     if env("GREEN_ID") and env("GREEN_TOKEN") and env("WHATSAPP_CHAT_ID"):
         base = (env("GREEN_API_URL") or "https://api.green-api.com").rstrip("/")
+        if image:
+            green_image(env, image, caption)          # the text still goes out if the picture fails
+            time.sleep(2)
         url = f"{base}/waInstance{env('GREEN_ID')}/sendMessage/{env('GREEN_TOKEN')}"
         for part in chunks(text):
             r = requests.post(url, json={"chatId": env("WHATSAPP_CHAT_ID"), "message": part}, timeout=30)

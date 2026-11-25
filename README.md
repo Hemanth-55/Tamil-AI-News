@@ -1,6 +1,6 @@
 # Tamil · AI News
 
-**A verified, 3-minute AI briefing on WhatsApp every morning, plus alerts when something big breaks.**
+**The Tamil Journal: a verified AI briefing on WhatsApp every morning, styled like a newspaper front page, plus alerts the moment something big breaks.**
 
 Part of **Tamil**, my personal AI agent system. It runs entirely on free infrastructure and uses no language model, so it costs nothing to run.
 
@@ -8,11 +8,15 @@ Part of **Tamil**, my personal AI agent system. It runs entirely on free infrast
 
 | | |
 |---|---|
+| **Front page** | A newspaper-style image: the day's headlines and a chart of which AI companies made the news. |
+| **Today's energy** | A good-morning note based on the Tamil panchangam: the Moon's natchathiram today, Tara Balam from Poosam and Chandrashtamam for Kadagam raasi, computed with the `ephem` astronomy library. |
 | **Top stories** | Up to five of the day's most important AI stories, each with a one-line summary, the number of sources and a link. |
+| **From the source** | New videos from the companies' official YouTube channels. |
+| **Career edge** | AI in sport from trusted newsrooms, plus one tutorial. |
 | **Tools to try** | Models trending on Hugging Face. |
 | **Learn** | One fresh tutorial or explainer. |
 | **Prompt to try** | A practical prompt that rotates daily. |
-| **Breaking** | Up to two alerts a day, only for stories that four or more newsrooms are already reporting, or official announcements confirmed elsewhere. |
+| **Breaking** | Checked every 30 minutes. Sent at once when one of the big AI companies (OpenAI, Anthropic, Google, Meta, Microsoft, NVIDIA, Apple, Amazon, xAI, DeepSeek, Mistral) makes a major official announcement or three or more newsrooms confirm a story. At most four a day. |
 
 ## How it decides what's true and what matters
 
