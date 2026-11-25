@@ -36,17 +36,17 @@ def whatsapp(text):
             r = requests.post(url, json={"chatId": env("WHATSAPP_CHAT_ID"), "message": part}, timeout=30)
             print("green-api", r.status_code)
             if r.status_code >= 300:
-                return False
+                return False, f"green-api error {r.status_code}"
             time.sleep(2)
-        return True
+        return True, "green-api"
     if env("CALLMEBOT_PHONE") and env("CALLMEBOT_KEY"):
         for part in chunks(text):
             r = requests.get("https://api.callmebot.com/whatsapp.php",
                              params={"phone": env("CALLMEBOT_PHONE"), "text": part, "apikey": env("CALLMEBOT_KEY")}, timeout=30)
             print("callmebot", r.status_code)
             if r.status_code >= 300:
-                return False
+                return False, f"callmebot error {r.status_code}"
             time.sleep(3)
-        return True
+        return True, "callmebot"
     print("preview mode: no WhatsApp secrets set; briefing saved to digests/")
-    return True
+    return True, "preview (no WhatsApp secrets found)"

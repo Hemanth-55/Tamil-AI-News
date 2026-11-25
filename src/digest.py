@@ -194,6 +194,27 @@ def load_state():
     return s
 
 
+NAMES = re.compile(r"\b([A-Z][a-zA-Z0-9\-]+(?:\s+[A-Z][a-zA-Z0-9\-]+)*)")
+
+
+def subjects(title):
+    """Proper names in a headline (people, companies, products), used to keep one story per subject."""
+    found = {m.lower() for m in NAMES.findall(title) if m.lower() not in ("the", "how", "why", "what", "ai", "a")}
+    return {f for f in found if len(f) > 2} - {t for t in found if " " not in t and t in {"new", "first"}}
+
+
+def diverse(stories, n):
+    picked = []
+    for s in stories:
+        sub = subjects(s["title"])
+        if any(len(sub & subjects(p["title"])) >= 1 and (sub & subjects(p["title"])) - {"nvidia", "openai", "google", "microsoft", "meta", "apple", "amazon"} for p in picked):
+            continue
+        picked.append(s)
+        if len(picked) == n:
+            break
+    return picked
+
+
 def is_seen(story, seen):
     tk = set(story["key"].split())
     return any(len(tk & set(k.split())) >= max(3, .6 * min(len(tk), len(k.split()))) for k in seen if not k.startswith(("hf:", "learn:")))
@@ -230,7 +251,9 @@ def main(mode):
     state = load_state()
     today = NOW.date().isoformat()
     if mode == "daily":
-        stories = [s for s in cluster(collect(28)) if s["verified"] and not is_seen(s, state["seen"])][:5]
+        if (ROOT / "digests" / f"{today}-daily.md").exists() and not os.environ.get("FORCE"):
+            print("today's briefing was already sent"); return
+        stories = diverse([s for s in cluster(collect(28)) if s["verified"] and not is_seen(s, state["seen"])], 5)
         tl, ll = tools(state["seen"]), learn(state["seen"])
         msg = daily_message(stories, tl, ll, prompt_of_the_day())
         keys = [s["key"] for s in stories] + [t["key"] for t in tl + ll]
@@ -245,7 +268,10 @@ def main(mode):
     (ROOT / "digests").mkdir(exist_ok=True)
     (ROOT / "digests" / f"{today}-{mode}.md").write_text(msg + "\n")
     print(msg)
-    if send.whatsapp(msg):
+    ok, how = send.whatsapp(msg)
+    STATE.parent.mkdir(exist_ok=True)
+    (STATE.parent / "last_send.json").write_text(json.dumps({"at": NOW.isoformat(), "mode": mode, "delivered_by": how, "ok": ok}, indent=1))
+    if ok:
         for k in keys:
             state["seen"][k] = today
         STATE.parent.mkdir(exist_ok=True)
