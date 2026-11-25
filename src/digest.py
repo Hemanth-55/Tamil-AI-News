@@ -16,7 +16,8 @@ import feedparser
 import requests
 
 sys.path.insert(0, str(Path(__file__).parent))
-from sources import AGGREGATE, AI_WORDS, COMPANIES, HF_TRENDING, HN, LEARN, OFFICIAL, OUTLETS, SPORTS_AI, TRUSTED, YOUTUBE
+from sources import (AGGREGATE, AI_WORDS, BIZ_WORDS, COMPANIES, HF_TRENDING, HN, LEARN, OFFICIAL, OUTLETS, SPORTS_AI,
+                     SPORTS_BIZ, SPORTS_TRUSTED, TRUSTED, YOUTUBE)
 import astro, frontpage, send
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -230,7 +231,7 @@ def diverse(stories, n):
 
 def is_seen(story, seen):
     tk = set(story["key"].split())
-    return any(len(tk & set(k.split())) >= max(3, .6 * min(len(tk), len(k.split()))) for k in seen if not k.startswith(("hf:", "learn:", "yt:", "sp:")))
+    return any(len(tk & set(k.split())) >= max(3, .6 * min(len(tk), len(k.split()))) for k in seen if not k.startswith(("hf:", "learn:", "yt:", "sp:", "sb:")))
 
 
 # ------------------------------------------------------------------ social: official YouTube channels, career
@@ -277,6 +278,44 @@ def career(seen):
     return out[:1]
 
 
+def sports_business(seen):
+    """The business of sport (US, India, European football) from trusted newsrooms: up to 2 per region, 5 in all."""
+    out, keys = [], set()
+    for region, url in SPORTS_BIZ.items():
+        got = 0
+        for e in feed(url):
+            pub = clean((e.get("source") or {}).get("title", ""))
+            title = clean(e.get("title"))
+            if pub and title.endswith(" - " + pub):
+                title = title[: -len(pub) - 3]
+            low = title.lower()
+            key = f"sb:{e.get('link')}"
+            tk = " ".join(sorted(tokens(title)))
+            if (pub.lower() not in SPORTS_TRUSTED or key in seen or tk in keys
+                    or not any(w in low for w in BIZ_WORDS)):
+                continue
+            d = when(e)
+            if d and d < NOW - timedelta(hours=48):
+                continue
+            keys.add(tk)
+            out.append(dict(key=key, line=f"*{region}* · {clean(title, 110)} · _{pub}_", link=e.get("link")))
+            got += 1
+            if got == 2:
+                break
+    return out[:5]
+
+
+ADVISOR_LENS = [
+    "Who gains and who loses money from today's biggest deal, and why?",
+    "If you advised the club or league in today's top story, what would you recommend first?",
+    "What data would you need to prove today's top deal is worth the price?",
+    "Which fans does today's story affect most, and how would you measure it?",
+    "What is the one-sentence recommendation for the owner in today's top story?",
+    "What could go wrong with today's biggest deal, and how would you hedge it?",
+    "How could AI change the decision behind today's top sports story?",
+]
+
+
 def company_counts(items):
     counts = {}
     for it in items:
@@ -301,7 +340,7 @@ def src_line(s):
 
 def daily_message(stories, energy, extras):
     d = boston_now()
-    L = ["*THE TAMIL JOURNAL*", f"_{d.strftime('%A, %B %-d, %Y')} · AI Edition_", LINE, "",
+    L = ["*THE TAMIL JOURNAL*", f"_{d.strftime('%A, %B %-d, %Y')} · AI & Sports Business Edition_", LINE, "",
          "*Vanakkam, Hemanth.*",
          f"_Moon in {energy['moon_star']} · {energy['tara']}, {energy['tara_meaning']}_", energy["message"],
          f"_{energy['weekday']}_", "", LINE, "*WHAT'S NEWS*", ""]
@@ -315,6 +354,8 @@ def daily_message(stories, energy, extras):
     for title, rows in extras:
         if rows:
             L += [LINE, f"*{title}*", ""] + [f"▸ {r['line']}\n{r['link']}" for r in rows] + [""]
+    lens = ADVISOR_LENS[boston_now().timetuple().tm_yday % len(ADVISOR_LENS)]
+    L += [LINE, "*ADVISOR'S LENS*", "_Think like a consultant: one question on today's news._", lens, ""]
     p = prompt_of_the_day()
     L += [LINE, "*PROMPT OF THE DAY*", f"_{p['use']}_", p["prompt"], "", LINE,
           "_Verified: every story is confirmed by the company itself or by two or more independent newsrooms._"]
@@ -343,10 +384,11 @@ def main(mode):
         stories = diverse(ranked, 5)
         energy = astro.today(NOW, boston_now().weekday())
         sn = {} if fresh else state["seen"]
-        extras = [("FROM THE SOURCE", youtube(sn)), ("CAREER EDGE", career(sn) + learn(sn)), ("TOOLS TO TRY", tools(sn))]
+        extras = [("SPORTS BUSINESS · US · INDIA · EUROPE", sports_business(sn)), ("FROM THE SOURCE", youtube(sn)),
+                  ("CAREER EDGE", career(sn) + learn(sn)), ("TOOLS TO TRY", tools(sn))]
         msg = daily_message(stories, energy, extras)
         image = str(out_dir / f"{today}-front-page.png")
-        frontpage.render(image, f"{boston_now().strftime('%A, %B %-d, %Y')} · Boston · AI Edition", "Vanakkam, Hemanth.",
+        frontpage.render(image, f"{boston_now().strftime('%A, %B %-d, %Y')} · Boston · AI & Sports Business Edition", "Vanakkam, Hemanth.",
                          energy, stories, company_counts(items))
         keys = [s["key"] for s in stories] + [r["key"] for _, rows in extras for r in rows]
     else:

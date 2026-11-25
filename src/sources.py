@@ -75,3 +75,27 @@ YOUTUBE = {"OpenAI": "@OpenAI", "Anthropic": "@anthropic-ai", "Google DeepMind":
 
 # AI in sport: kept for the career section
 SPORTS_AI = "https://news.google.com/rss/search?q=%22sports+analytics%22+OR+%22AI%22+%28NBA+OR+NFL+OR+MLB+OR+NHL+OR+cricket%29+when:3d&hl=en-US&gl=US&ceid=US:en"
+
+# ------------------------------------------------------------------ sports business (added 2026-11-25)
+# Hemi is building a career as a sports-industry advisor: the money, deals and decisions behind sport,
+# in the US, India and European football. Broad league searches, then kept only when the headline is about business
+# and the publisher is trusted.
+_G = "https://news.google.com/rss/search?hl=en-US&gl=US&ceid=US:en&q="
+SPORTS_BIZ = {
+    "US": _G + "NFL+OR+NBA+OR+MLB+OR+NHL+OR+MLS+OR+WNBA+OR+NCAA+OR+%22sports+business%22+when:2d",
+    "INDIA": _G + "IPL+OR+BCCI+OR+%22Indian+Super+League%22+OR+%22Pro+Kabaddi%22+OR+%22Indian+sports%22+when:2d",
+    "EUROPE": _G + "%22Premier+League%22+OR+UEFA+OR+%22La+Liga%22+OR+Bundesliga+OR+%22Serie+A%22+OR+%22Champions+League%22+when:2d",
+}
+BIZ_WORDS = ("revenue", "rights", "deal", "sponsor", "valuation", "valued", "takeover", "invest", "stake", "owner",
+             "ownership", "sale", "sells", "buy", "billion", "million", "bn", "£", "€", "$", "auction", "finance",
+             "financial", "profit", "loss", "broadcast", "streaming", "media", "stadium", "arena", "partnership",
+             "brand", "regulator", "salary cap", "betting", "private equity", "fund", "ipo", "lockout", "cba",
+             "expansion", "franchise", "commercial", "ticket", "economics", "business", "acquire", "acquisition", "merger")
+SPORTS_TRUSTED = {"sportico", "sports business journal", "front office sports", "the athletic", "espn", "espncricinfo",
+                  "cricbuzz", "bbc", "bbc sport", "sky sports", "the guardian", "reuters", "bloomberg", "financial times",
+                  "the new york times", "the wall street journal", "wsj", "cnbc", "forbes", "associated press", "ap news",
+                  "sportcal", "sportbusiness", "sportspro", "off the pitch", "the economic times", "mint", "livemint",
+                  "business standard", "the hindu", "the indian express", "hindustan times", "times of india",
+                  "moneycontrol", "the times of india", "yahoo sports", "axios", "the times", "the telegraph",
+                  "football365", "insidesport", "inside sport", "sports illustrated", "cbs sports", "nbc sports",
+                  "the business of sports", "boardroom", "variety", "deadline", "the hollywood reporter"}

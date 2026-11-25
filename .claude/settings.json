@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && git pull --rebase -q 2>/dev/null; echo '--- notes/session-log.md (latest) ---'; head -30 notes/session-log.md 2>/dev/null; echo; echo '--- notes/backlog.md ---'; cat notes/backlog.md 2>/dev/null; echo; echo \"--- branch: $(git branch --show-current) ---\""
+          }
+        ]
+      }
+    ]
+  }
+}
